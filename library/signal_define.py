@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from filter_design import rrcos_pulseshaping_freq
-from utilities import upsampling
+from .filter_design import rrcos_pulseshaping_freq
+from .utilities import upsampling
 
 
 class Signal(object):

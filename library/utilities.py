@@ -56,7 +56,7 @@ class Osa(object):
 
         p = lfilter(np.ones((1, windowlength))[0] / windowlength, 1, power)
 
-        P = np.roll(p, -(windowLength - 1) // 2)
+        p  = np.roll(p, -(windowlength - 1) // 2)
 
         fc = signal.freq
         freq_vector = fftfreq(len(signal), 1 / signal.fs_in_fiber)
@@ -64,7 +64,7 @@ class Osa(object):
 
         freq_vector_reshz = np.arange(np.min(freq_vector), np.max(freq_vector), self.reshz)
 
-        y = interp1d(freq_vector, p)
+        y = interp1d(freq_vector,  p )
 
         res = y(freq_vector_reshz)
         wavelength = c / (fc + freq_vector)
@@ -115,3 +115,4 @@ class Osa(object):
     def convert_2osnr(self, snr, wavelength):
         res = snr + 10 * np.log10(self.reshz(wavelength) / 12.5e9)
         return res
+

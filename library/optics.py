@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from .signal_define import WdmSignal
+from .filter_design import  ideal_lp
 class Laser(object):
 
     def __init__(self, linewidth, is_phase_noise, freq):
@@ -181,7 +183,6 @@ class Mux(object):
 
         wdm_samples = 0
 
-        signal_samples = np.zeros((len(signals)))
 
         for idx, signal in enumerate(signals):
             freq_samples = np.fft.fft(signal[:], n=max_length, axis=-1)
@@ -198,4 +199,37 @@ class Mux(object):
         wdm_signal.baudrates = [signal.baudrate for signal in signals]
         wdm_signal.qam_orders = [signal.qam_order for signal in signals]
         return wdm_signal
+
+
+class Demux(object):
+
+    @staticmethod
+    def demux_signal(wdm_signals, signal_index):
+        if wdm_signals.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+
+        index = wdm_signals.wdm_comb_config.tolist().index(signal_index)
+        relative_freq = wdm_signals.relative_freq[index]
+
+        df = wdm_signals.fs_in_fiber / wdm_signals.length
+
+        freq_samples = np.fft.fft(wdm_signals[:], axis=-1)
+        yidong_dianshu = relative_freq / df
+        yidong_dianshu = np.ceil(yidong_dianshu)
+        yidong_dianshu = np.int(yidong_dianshu)
+        freq_samples = np.roll(freq_samples, -yidong_dianshu, axis=-1)
+
+        # ideal low pass filter
+        left_freq = -wdm_signals.baudrates[index] / 2
+        right_freq = -left_freq
+        freq_samples = ideal_lp(freq_samples, left_freq, right_freq, wdm_signals.fs_in_fiber, need_fft=False)
+
+        symbols = wdm_signals.symbols[index]
+        baudrate = wdm_signals.baudrates[index]
+        qam_order = wdm_signals.qam_orders[index]
+        signal = DummySignal(np.fft.ifft(freq_samples, axis=-1), baudrate, qam_order, symbols, wdm_signals.is_on_cuda,
+                             wdm_signals.fs_in_fiber)
+        return signal
 

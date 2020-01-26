@@ -68,3 +68,34 @@ def rrcos_pulseshaping_freq(sig, fs, T, beta, is_on_cuda=False):
     sig_f = np.fft.fft(sig)
     sig_out = np.fft.ifft(sig_f * nyq_fil)
     return sig_out
+
+
+def ideal_lp(samples, left_freq, right_freq, fs, need_fft=True):
+    if hasattr(samples, 'device'):
+        import cupy as np
+        from cupy.fft import fftfreq
+    else:
+        import numpy as np
+        from scipy.fft import fftfreq
+
+    if need_fft:
+        if hasattr(samples, 'device'):
+            from cupy.fft import fft, ifft
+        else:
+            from scipy.fft import fft, ifft
+        samples = fft(samples)
+
+    freq_vector = fftfreq(len(np.atleast_2d(samples)[0]), 1 / fs)
+
+    mask1 = freq_vector <= left_freq
+
+    mask2 = freq_vector > right_freq
+
+    for row in samples:
+        row[mask1] = 0
+        row[mask2] = 0
+
+    if need_fft:
+        samples = ifft(samples, axis=-1)
+
+    return samples

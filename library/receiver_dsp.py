@@ -1,4 +1,4 @@
-from filter_design import rrcos_pulseshaping_freq
+from .filter_design import rrcos_pulseshaping_freq
 
 
 def matched_filter(signal, roll_off):
