@@ -12,6 +12,9 @@ class Signal(object):
             qam_order
             message 2d-array
             all 2d-array
+
+            baudrate:hz
+
         '''
         self.qam_order = qam_order
         self.message = None
@@ -50,6 +53,12 @@ class Signal(object):
             plt.psd(self.ds_in_fiber[0], NFFT=16384, Fs=self.fs_in_fiber, scale_by_freq=True)
             self.cuda()
             plt.show()
+        else:
+            plt.psd(self.ds_in_fiber[0], NFFT=16384, Fs=self.fs_in_fiber, scale_by_freq=True)
+            plt.show()
+
+    def __len__(self):
+        return len(self[0])
 
     @property
     def constl(self):
@@ -114,9 +123,21 @@ class Signal(object):
             self.is_on_cuda = False
         return self
 
-
+    @property
+    def wavelength(self):
+        from scipy.constants import c
+        return c/self.freq
 class QamSignal(Signal):
     def __init__(self, qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number):
+        '''
+
+        :param qamorder:
+        :param baudrate: hz
+        :param sps:
+        :param sps_in_fiber:
+        :param symbol_length:
+        :param pol_number:
+        '''
         super().__init__(qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number)
         self.message = np.random.randint(low=0, high=self.qam_order, size=(self.pol_number, self.symbol_length))
         self.map()
@@ -151,3 +172,151 @@ class QamSignal(Signal):
     @property
     def time_vector(self):
         return 1 / self.fs_in_fiber * np.arange(self.ds_in_fiber.shape[1])
+
+
+class WdmSignal(object):
+    def __init__(self, symbols, wdm_samples, freq, is_on_cuda, fs_in_fiber):
+        self.symbols = symbols
+        self.wdm_samples = wdm_samples
+
+        self.relative_freq = freq
+        self.is_on_cuda = is_on_cuda
+        self.fs_in_fiber = fs_in_fiber
+
+        self.wdm_comb_config = None
+        self.baudrates = None
+        self.qam_orders = None
+
+        if self.is_on_cuda:
+            import cupy as cp
+            self.fs_in_fiber = cp.asnumpy(self.fs_in_fiber)
+            self.wdm_comb_config = cp.asnumpy(self.wdm_comb_config)
+
+            self.relative_freq = cp.asnumpy(self.relative_freq)
+
+    def cuda(self):
+        if self.is_on_cuda:
+            return self
+
+        else:
+            try:
+                import cupy as cp
+            except ImportError:
+                return self
+
+            self.wdm_samples = cp.array(self.wdm_samples)
+            self.is_on_cuda = True
+
+        return self
+
+    def cpu(self):
+        if not self.is_on_cuda:
+            return self
+        else:
+            import cupy as cp
+            self.wdm_samples = cp.asnumpy(self.wdm_samples)
+            self.fs_in_fiber = cp.asnumpy(self.fs_in_fiber)
+            self.is_on_cuda = False
+        return self
+
+    def __getitem__(self, value):
+        return self.wdm_samples[value]
+
+    def __setitem__(self, key, value):
+        self.wdm_samples[key] = value
+
+    def psd(self):
+        if self.is_on_cuda:
+            self.cpu()
+
+            plt.psd(self[0], NFFT=16384, Fs=self.fs_in_fiber, window=np.hamming(16384))
+            plt.show()
+            self.cuda()
+        else:
+            plt.psd(self[0], NFFT=16384, Fs=self.fs_in_fiber, window=np.hamming(16384))
+            plt.show()
+    @property
+    def shape(self):
+        return self.wdm_samples.shape
+
+    @property
+    def __len__(self):
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+        return len(np.atleast_2d(self.wdm_samples)[0])
+
+
+class DummySignal:
+    def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, fs_in_fiber):
+        self.samples = samples
+        self.baudrate = baudrate
+        self.qam_order = qam_order
+        self.symbol = symbol
+        self.is_on_cuda = is_on_cuda
+
+        self.fs_in_fiber = fs_in_fiber
+
+        self.sps = None
+        
+        if self.is_on_cuda:
+            import cupy as cp
+            self.fs_in_fiber = cp.asnumpy(self.fs_in_fiber)
+
+    @property
+    def fs(self):
+        assert self.sps is not None
+        return self.sps * self.baudrate
+
+    def cpu(self):
+        if not self.is_on_cuda:
+            return
+        else:
+            import cupy as cp
+            self.samples = cp.asnumpy(self.samples)
+            self.is_on_cuda = False
+
+    def cuda(self):
+        if self.is_on_cuda:
+            return
+        else:
+            try:
+                import cupy as cp
+            except ImportError:
+                return
+            self.samples = cp.array(self.samples)
+            self.is_on_cuda = True
+
+    def __getitem__(self, key):
+        return self.samples[key]
+
+    def psd(self):
+        if self.is_on_cuda:
+            self.cpu()
+            plt.psd(self[0], NFFT=16384, window=np.hamming(16384))
+            plt.show()
+            self.cuda()
+        else:
+            plt.psd(self[0], NFFT=16384, window=np.hamming(16384))
+            plt.show()
+
+    @property
+    def shape(self):
+        return self.samples.shape
+
+    def scatterplot(self, sps):
+        if self.is_on_cuda:
+            self.cpu()
+            fignumber = self.shape[0]
+            fig, axes = plt.subplots(nrows=1, ncols=fignumber)
+            for ith, ax in enumerate(axes):
+                ax.scatter(self[ith, ::sps].real, self[ith, ::sps].imag, s=1, c='b')
+                ax.set_aspect('equal', 'box')
+
+                ax.set_xlim([self[ith, ::sps].real.min() - 0.1, self[ith, ::sps].real.max() + 0.1])
+                ax.set_ylim([self[ith, ::sps].imag.min() - 0.1, self[ith, ::sps].imag.max() + 0.1])
+
+            plt.tight_layout()
+            plt.show()
+            self.cuda()
