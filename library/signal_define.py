@@ -3,7 +3,8 @@ import numpy as np
 
 from .filter_design import rrcos_pulseshaping_freq
 from .utilities import upsampling
-
+import os
+BASE = os.path.dirname(os.path.abspath(__file__))
 
 class Signal(object):
 
@@ -69,22 +70,28 @@ class Signal(object):
         self.__constl = value
 
     def scatterplot(self, sps):
+        flag = False
         if self.is_on_cuda:
             self.cpu()
-            fignumber = self.shape[0]
-            fig, axes = plt.subplots(nrows=1, ncols=fignumber)
-            for ith, ax in enumerate(axes):
-                ax.scatter(self.ds_in_fiber[ith, ::sps].real, self.ds_in_fiber[ith, ::sps].imag, s=1, c='b')
-                ax.set_aspect('equal', 'box')
+            flag = True
+            
+        fignumber = self.shape[0]
+        fig, axes = plt.subplots(nrows=1, ncols=fignumber)
+        for ith, ax in enumerate(axes):
+            ax.scatter(self.ds_in_fiber[ith, ::sps].real, self.ds_in_fiber[ith, ::sps].imag, s=1, c='b')
+            ax.set_aspect('equal', 'box')
 
-                ax.set_xlim(
+            ax.set_xlim(
                     [self.ds_in_fiber[ith, ::sps].real.min() - 0.1, self.ds_in_fiber[ith, ::sps].real.max() + 0.1])
-                ax.set_ylim(
+            ax.set_ylim(
                     [self.ds_in_fiber[ith, ::sps].imag.min() - 0.1, self.ds_in_fiber[ith, ::sps].imag.max() + 0.1])
 
             plt.tight_layout()
             plt.show()
+        
+        if flag:
             self.cuda()
+            
 
     @property
     def samples(self):
@@ -127,7 +134,9 @@ class Signal(object):
     def wavelength(self):
         from scipy.constants import c
         return c/self.freq
+    
 class QamSignal(Signal):
+    
     def __init__(self, qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number):
         '''
 
@@ -144,7 +153,7 @@ class QamSignal(Signal):
 
     def map(self):
         import joblib
-        constl = joblib.load('constl')[self.qam_order][0]
+        constl = joblib.load(BASE+'/constl')[self.qam_order][0]
         self.symbol = np.zeros_like(self.message, dtype=np.complex)
         for row_index, sym in enumerate(self.symbol):
             for i in range(self.qam_order):
@@ -175,6 +184,7 @@ class QamSignal(Signal):
 
 
 class WdmSignal(object):
+    
     def __init__(self, symbols, wdm_samples, freq, is_on_cuda, fs_in_fiber):
         self.symbols = symbols
         self.wdm_samples = wdm_samples
