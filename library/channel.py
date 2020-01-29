@@ -15,7 +15,7 @@ class AwgnChannel(object):
             import numpy as np
 
         if power.lower() == 'measure':
-            power = np.mean(np.abs(power) ** 2, axis=1)
+            power = np.mean(np.abs(signal[:]) ** 2, axis=1)
             power = np.sum(power)
             noise_power = power / self.snr_linear * signal.sps_in_fiber
             noise_power_xpol = noise_power / 2
