@@ -70,6 +70,7 @@ class Signal(object):
         self.__constl = value
 
     def scatterplot(self, sps):
+        
         flag = False
         if self.is_on_cuda:
             self.cpu()
@@ -86,8 +87,8 @@ class Signal(object):
             ax.set_ylim(
                     [self.ds_in_fiber[ith, ::sps].imag.min() - 0.1, self.ds_in_fiber[ith, ::sps].imag.max() + 0.1])
 
-            plt.tight_layout()
-            plt.show()
+        plt.tight_layout()
+        plt.show()
         
         if flag:
             self.cuda()
