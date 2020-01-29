@@ -51,10 +51,12 @@ class Signal(object):
     def psd(self):
         if self.is_on_cuda:
             self.cpu()
+            plt.figure()
             plt.psd(self.ds_in_fiber[0], NFFT=16384, Fs=self.fs_in_fiber, scale_by_freq=True)
             self.cuda()
             plt.show()
         else:
+            plt.figure()
             plt.psd(self.ds_in_fiber[0], NFFT=16384, Fs=self.fs_in_fiber, scale_by_freq=True)
             plt.show()
 
@@ -135,6 +137,15 @@ class Signal(object):
     def wavelength(self):
         from scipy.constants import c
         return c/self.freq
+    
+    def inplace_normalise(self):
+        factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
+        self[:] = self[:]/np.sqrt(factor)
+        
+    def set_signal_power(self,power_in_dbm):
+        self.inplace_normalise()
+        power_linear = 10**(power_in_dbm/10)/1000/2
+        self[:] = np.sqrt(power_linear) * self[:]
     
 class QamSignal(Signal):
     

@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.fft import fft, ifft, fftfreq
 
+from scipy.constants import c
+
 
 class AwgnChannel(object):
 
@@ -15,12 +17,12 @@ class AwgnChannel(object):
             import numpy as np
 
         if power.lower() == 'measure':
+            
             power = np.mean(np.abs(signal[:]) ** 2, axis=1)
             power = np.sum(power)
             noise_power = power / self.snr_linear * signal.sps_in_fiber
             noise_power_xpol = noise_power / 2
-            seq = (noise_power_xpol / 2) * \
-                  (np.random.randn((2, len(signal))) + 1j * np.random.randn((2, len(signal))))
+            seq = (noise_power_xpol / 2) * (np.random.randn(2, len(signal)) + 1j * np.random.randn(2, len(signal)))
 
             signal[:] = signal[:] + seq
             return signal
@@ -87,7 +89,7 @@ class NonlinearFiber(Fiber):
 
     def prop(self, signal):
         signal.cuda()
-        if singal.is_on_cuda:
+        if signal.is_on_cuda:
             self.fft = cupyx.scipy.fft
             self.ifft = cupyx.scipy.ifft
             self.plan = cupyx.scipy.plan

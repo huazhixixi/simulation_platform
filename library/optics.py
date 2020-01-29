@@ -2,9 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .signal_define import WdmSignal
 from .filter_design import  ideal_lp
+
 class Laser(object):
 
-    def __init__(self, linewidth, is_phase_noise, freq):
+    def __init__(self, linewidth, is_phase_noise, freq,laser_power):
         '''
             linewidth:hz
             freq:hz
@@ -13,7 +14,8 @@ class Laser(object):
         self.is_phase_noise = is_phase_noise
         self.freq = freq
         self.is_on_cuda = False
-
+        self.laser_power = laser_power
+        
     def phase_noise(self, signal):
 
         if self.is_on_cuda:
@@ -39,6 +41,9 @@ class Laser(object):
         if self.is_phase_noise:
             self.phase_noise = self.phase_noise(signal)
             signal[:] = signal[:] * np.exp(1j * self.phase_noise)
+            
+        signal.inplace_normalise()
+        signal.set_signal_power(self.laser_power)
         return signal
 
     def plot_phase_noise(self):

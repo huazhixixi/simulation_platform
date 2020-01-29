@@ -28,14 +28,21 @@ def scatterplot(samples, sps=1):
     plt.show()
 
 
+from scipy.constants import c
+
 class Osa(object):
 
-    def __init__(self, resnm):
+    def __init__(self, resnm,wavelength):
+        '''
+            wavelength: in m
+        '''
         self.resnm = resnm
         self.resm = self.resnm * 1e-9
-
-    def reshz(self, wavelength):
-        reshz_ = self.c / (wavelength - self.resm / 2) - self.c / (wavelength + self.resm / 2)
+        self.wavelength = wavelength
+        
+    @property
+    def reshz(self):
+        reshz_ = c / (self.wavelength - self.resm / 2) - c / (self.wavelength + self.resm / 2)
         return reshz_
 
     def optical_spectrum(self, signal):
@@ -44,13 +51,14 @@ class Osa(object):
         from scipy.interpolate import interp1d
         from scipy.constants import c
         signal.cpu()
+        
         fs_in_fiber = signal.fs_in_fiber
-        power = np.sum(np.abs(fft(signal[:], axis=-1)) ** 2, axis=0) / fs_in_fiber * self.reshz_ / len(signal)
+        power = np.sum(np.abs(fft(signal[:], axis=-1)) ** 2, axis=0) / fs_in_fiber * self.reshz / len(signal)
         power = fftshift(power)
 
         df = fs_in_fiber / len(signal)
 
-        windowlength = int(self.reshz(signal.wavelength) / df)
+        windowlength = int(self.reshz / df)
         if divmod(windowlength, 2)[1] == 0:
             windowlength = windowlength + 1
 
