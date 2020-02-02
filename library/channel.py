@@ -31,9 +31,16 @@ class AwgnChannel(object):
 
 class Fiber(object):
 
-    def __init__(self, alpha, beta, length, ref):
+    def __init__(self, alpha, D, length, ref):
+        '''
+            :param alpha:db/km
+            :D:s^2/km
+            :length:km
+            :ref:nm
+
+        '''
         self.alpha = alpha
-        self.beta = beta
+        self.D = D
         self.length = length
         self.reference_wavelength = ref  # nm
         self.fft = None
@@ -80,10 +87,16 @@ class Fiber(object):
         return effective_length
 
 
+
 class NonlinearFiber(Fiber):
 
-    def __init__(self, **kwargs):
-        super(NonlinearFiber, self).__init__(**kwargs)
+    def __init__(self, alpha,D,length,ref,**kwargs):
+        '''
+            :param: kwargs:
+                key: step_length
+                key:gamma
+        '''
+        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=ref)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
         self.linear_prop = None
@@ -194,6 +207,3 @@ class NonlinearFiber(Fiber):
             time_x = self.ifft(freq_x, overwrite_x=True)
             time_y = self.ifft(freq_y, overwrite_x=True)
             return time_x, time_y
-
-
-
