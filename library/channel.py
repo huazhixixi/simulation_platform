@@ -35,6 +35,9 @@ class Fiber(object):
         self.beta = beta
         self.length = length
         self.reference_wavelength = ref  # nm
+        self.fft = None
+        self.ifft = None
+        self.plan = None
 
     def prop(self, signal):
         raise NotImplementedError
@@ -82,6 +85,26 @@ class NonlinearFiber(Fiber):
         super(NonlinearFiber, self).__init__(**kwargs)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
+        self.__init_backend()
+        self.linear_prop = None
+
+
+    def __init_backend(self):
+        try:
+            import cupy.cupyx as cupy
+            self.fft  = cupyx.scipy.fft
+            self.ifft = cupyx.scipy.ifft
+            self.plan = cupyx.scipy.plan
+            self.linear_prop = self.linear_prop_cupy
+        except  ImportError:
+            import arrayfire as af
+            self.fft = af.dft
+            self.ifft = af.idft
+            self.linear_prop = self.linear_prop_af
+
+        assert self.fft is not None
+        assert self.ifft is not None
+        assert self.linear_prop is not None
 
     @property
     def step_length_eff(self):
@@ -143,7 +166,7 @@ class NonlinearFiber(Fiber):
 
         return time_x, time_y
 
-    def linear_prop(self, D, timex, timey, length):
+    def linear_prop_cupy(self, D, timex, timey, length):
         with self.plan:
             freq_x = self.fft(timex, overwrite_x=True)
             freq_y = self.fft(timey, overwrite_x=True)
@@ -154,3 +177,6 @@ class NonlinearFiber(Fiber):
             time_x = self.ifft(freq_x, overwrite_x=True)
             time_y = self.ifft(freq_y, overwrite_x=True)
             return time_x, time_y
+
+
+
