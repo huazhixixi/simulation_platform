@@ -106,11 +106,16 @@ class NonlinearFiber(Fiber):
 
     def __init_backend(self):
         try:
-            import cupy.cupyx as cupy
-            self.fft  = cupyx.scipy.fft
-            self.ifft = cupyx.scipy.ifft
-            self.plan = cupyx.scipy.plan
+            from cupyx.scipy.fft import fft
+            from cupyx.scipy.fft import ifft
+            from cupyx.scipy.fft import get_fft_plan
+            import cupy as np
+            self.fft = fft
+            self.ifft = ifft
+            self.plan = get_fft_plan
+            self.np = np
             self.linear_prop = self.linear_prop_cupy_scipy
+            
         except  ImportError:
 
             try:
@@ -118,8 +123,9 @@ class NonlinearFiber(Fiber):
                 self.fft = af.dft
                 self.ifft = af.idft
                 self.linear_prop = self.linear_prop_af
-
+                self.np = af
             except ImportError:
+                from scipy.fft import get_fft_plan
                 self.fft = fft
                 self.ifft = ifft
                 self.linear_prop = self.linear_prop_cupy_scipy
@@ -129,6 +135,8 @@ class NonlinearFiber(Fiber):
                     def __exit__(self, exc_type, exc_val, exc_tb):
                         pass
                 self.plan = plan
+                import numpy as np
+                self.np = np
 
         assert self.fft is not None
         assert self.ifft is not None
@@ -142,10 +150,7 @@ class NonlinearFiber(Fiber):
 
     def prop(self, signal):
         signal.cuda()
-        if signal.is_on_cuda:
-            self.fft = cupyx.scipy.fft
-            self.ifft = cupyx.scipy.ifft
-            self.plan = cupyx.scipy.plan
+       
 
         nstep = self.length / self.step_length
         nstep = int(np.floor(nstep))
@@ -197,6 +202,8 @@ class NonlinearFiber(Fiber):
         return time_x, time_y
 
     def linear_prop_cupy_scipy(self, D, timex, timey, length):
+        if callable (self.plan) :
+            self.plan = self.plan(timex,shape = timex.shape,axes=-1)
         with self.plan:
             freq_x = self.fft(timex, overwrite_x=True)
             freq_y = self.fft(timey, overwrite_x=True)
