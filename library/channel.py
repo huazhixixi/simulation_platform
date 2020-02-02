@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.fft import fft, ifft, fftfreq
 
+
 from scipy.constants import c
 
 
@@ -85,8 +86,9 @@ class NonlinearFiber(Fiber):
         super(NonlinearFiber, self).__init__(**kwargs)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
-        self.__init_backend()
         self.linear_prop = None
+
+        self.__init_backend()
 
 
     def __init_backend(self):
@@ -95,16 +97,31 @@ class NonlinearFiber(Fiber):
             self.fft  = cupyx.scipy.fft
             self.ifft = cupyx.scipy.ifft
             self.plan = cupyx.scipy.plan
-            self.linear_prop = self.linear_prop_cupy
+            self.linear_prop = self.linear_prop_cupy_scipy
         except  ImportError:
-            import arrayfire as af
-            self.fft = af.dft
-            self.ifft = af.idft
-            self.linear_prop = self.linear_prop_af
+
+            try:
+                import arrayfire as af
+                self.fft = af.dft
+                self.ifft = af.idft
+                self.linear_prop = self.linear_prop_af
+
+            except ImportError:
+                self.fft = fft
+                self.ifft = ifft
+                self.linear_prop = self.linear_prop_cupy_scipy
+                class plan:
+                    def __enter__(self):
+                        pass
+                    def __exit__(self, exc_type, exc_val, exc_tb):
+                        pass
+                self.plan = plan
 
         assert self.fft is not None
         assert self.ifft is not None
         assert self.linear_prop is not None
+        if self.linear_prop is self.linear_prop_cupy_scipy:
+            assert self.plan is not None
 
     @property
     def step_length_eff(self):
@@ -166,7 +183,7 @@ class NonlinearFiber(Fiber):
 
         return time_x, time_y
 
-    def linear_prop_cupy(self, D, timex, timey, length):
+    def linear_prop_cupy_scipy(self, D, timex, timey, length):
         with self.plan:
             freq_x = self.fft(timex, overwrite_x=True)
             freq_y = self.fft(timey, overwrite_x=True)
