@@ -109,4 +109,29 @@ class CMA(Equalizer):
         self.equalized_symbols = symbols
 
     
-   
+class PhaseRecovery(object):
+    
+    def __init__(self,method = 'superscalar',**kwargs):
+        
+        self.method = method
+        if self.method.lower() == 'bps':
+            return BPS(**kwargs)
+        
+        elif self.method.lower() == 'supersclar':
+            return Superscalar(**kwargs)
+        
+        else:
+            return PLL(**kwargs)
+        
+    def prop(self,signal):
+        raise NotImplementedError
+        
+    def plot_phase_track(self):
+        raise NotImplementedError
+        
+class Superscalar(PhaseRecovery):
+    pass
+
+class 
+        
+        

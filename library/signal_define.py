@@ -138,6 +138,10 @@ class Signal(object):
         from scipy.constants import c
         return c/self.freq
     
+    @property
+    def center_wavelength(self):
+        return self.wavelength
+    
     def inplace_normalise(self):
         factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
         self[:] = self[:]/np.sqrt(factor)
