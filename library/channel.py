@@ -187,6 +187,8 @@ class NonlinearFiber(Fiber):
             signal[1] = signal[1] * self.np.exp(atten * last_step)
             signal[0], signal[1] = self.linear_prop(D, signal[0], signal[1], last_step / 2)
 
+        return signal
+
     def nonlinear_prop(self, N, time_x, time_y, step_length=None):
         if step_length is None:
             time_x = time_x * self.np.exp(

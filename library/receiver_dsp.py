@@ -4,8 +4,34 @@ from .numba_core import cma_equalize_core
 import numpy as np
 import numba
 import matplotlib.pyplot as plt
+from .signal_define import Signal
+from typing import List
 
-def matched_filter(signal, roll_off):
+def cd_compensation(span,signal:Signal):
+    if signal.is_on_cuda:
+        import cupy as np
+    else:
+        import numpy as np
+
+    center_wavelength = signal.wavelength
+    freq_vector = np.fft.fftfreq(len(signal[0]),1/signal.fs)
+    omeg_vector = 2*np.pi*freq_vector
+    if not isinstance(span,list):
+        spans = [span]
+
+    for span in spans:
+        beta2 = -span.beta2(center_wavelength)
+        dispersion = (-1j/2) * beta2 * omeg_vector**2 * span.length 
+        for row in signal[:]:
+            row[:] = np.fft.ifft(np.fft.fft(row) * np.exp(dispersion))
+
+    return signal
+
+    
+
+from .signal_define import DummySignal,QamSignal
+
+def matched_filter(signal, roll_off)->DummySignal:
     if signal.is_on_cuda:
         import cupy as np
     else:
@@ -13,8 +39,8 @@ def matched_filter(signal, roll_off):
     samples = np.copy(signal[:])
     for row in samples:
         row[:] = rrcos_pulseshaping_freq(row, signal.fs, 1 / signal.baudrate, roll_off, signal.is_on_cuda)
-    signal[:] = samples
-    return signal
+    
+    return DummySignal(samples,signal.baudrate,signal.qam_order,signal.symbol,signal.is_on_cuda,signal.sps)
 
 
 

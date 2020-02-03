@@ -135,9 +135,14 @@ class Signal(object):
 
     def to_mat(self,filename):
         from scipy.io import savemat
+        flag = 0
+        if self.is_on_cuda:
+            self.cpu()
+            flag = 1
         savemat(filename,dict(fs = self.fs,fs_in_fiber = self.fs_in_fiber,sps = self.sps,sps_in_fiber = self.sps_in_fiber,baudrate = self.baudrate,
                               samples_in_fiber = self.samples,symbol_tx = self.symbol))
-
+        if flag:
+            self.cuda()
     @property
     def wavelength(self):
         from scipy.constants import c
@@ -304,20 +309,19 @@ class WdmSignal(object):
 
 
 class DummySignal:
-    def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, fs_in_fiber):
+    def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, sps):
         self.samples = samples
         self.baudrate = baudrate
         self.qam_order = qam_order
         self.symbol = symbol
         self.is_on_cuda = is_on_cuda
 
-        self.fs_in_fiber = fs_in_fiber
+     
 
-        self.sps = None
+        self.sps = sps
         
         if self.is_on_cuda:
             import cupy as cp
-            self.fs_in_fiber = cp.asnumpy(self.fs_in_fiber)
 
     @property
     def fs(self):
@@ -339,12 +343,16 @@ class DummySignal:
             try:
                 import cupy as cp
             except ImportError:
-                return
+                print('cuda not supported')
             self.samples = cp.array(self.samples)
             self.is_on_cuda = True
 
     def __getitem__(self, key):
         return self.samples[key]
+
+    def __setitem__(self,key,value):
+        self.samples[key] = value
+
 
     def psd(self):
         if self.is_on_cuda:
@@ -369,9 +377,13 @@ class DummySignal:
                 ax.scatter(self[ith, ::sps].real, self[ith, ::sps].imag, s=1, c='b')
                 ax.set_aspect('equal', 'box')
 
-                ax.set_xlim([self[ith, ::sps].real.min() - 0.1, self[ith, ::sps].real.max() + 0.1])
-                ax.set_ylim([self[ith, ::sps].imag.min() - 0.1, self[ith, ::sps].imag.max() + 0.1])
+                ax.set_xlim([self[ith, ::sps].real.min() - self[ith, ::sps].real.min()/3, self[ith, ::sps].real.max() + self[ith, ::sps].real.max()/3])
+                ax.set_ylim([self[ith, ::sps].imag.min() - self[ith, ::sps].imag.min()/3, self[ith, ::sps].imag.max() + self[ith, ::sps].imag.max()/3])
 
             plt.tight_layout()
             plt.show()
             self.cuda()
+
+    def inplace_normalise(self):
+        factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
+        self[:] = self[:]/np.sqrt(factor)

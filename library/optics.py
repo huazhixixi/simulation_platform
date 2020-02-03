@@ -39,8 +39,8 @@ class Laser(object):
             import numpy as np
 
         if self.is_phase_noise:
-            self.phase_noise = self.phase_noise(signal)
-            signal[:] = signal[:] * np.exp(1j * self.phase_noise)
+            self.phase_noise_ = self.phase_noise(signal)
+            signal[:] = signal[:] * np.exp(1j * self.phase_noise_)
             
         signal.inplace_normalise()
         signal.set_signal_power(self.laser_power)
@@ -51,11 +51,11 @@ class Laser(object):
         if self.is_phase_noise:
             if self.is_on_cuda:
                 import cupy as cp
-                self.phase_noise = cp.asnumpy(self.phase_noise)
+                self.phase_noise_ = cp.asnumpy(self.phase_noise_)
 
-            fig, axes = plt.subplots(figsize=(10, 2), nrows=1, ncols=self.phase_noise.shape[0])
+            fig, axes = plt.subplots(figsize=(10, 2), nrows=1, ncols=self.phase_noise_.shape[0])
             for ith, ax in enumerate(axes):
-                ax.plot(self.phase_noise[ith], c='b', lw=2)
+                ax.plot(self.phase_noise_[ith], c='b', lw=2)
 
         plt.tight_layout()
         plt.show()
