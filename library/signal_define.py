@@ -25,7 +25,7 @@ class Signal(object):
         self.ds = None
         self.ds_in_fiber = None
         self.symbol = None
-        self.freq = None
+        self.freq = None # center frequency
         self.symbol_length = symbol_length
         self.pol_number = pol_number
         self.__constl = None
@@ -125,7 +125,6 @@ class Signal(object):
     def cpu(self):
         if not self.is_on_cuda:
             return
-
         else:
             import cupy as cp
             self.ds_in_fiber = cp.asnumpy(self.ds_in_fiber)
@@ -153,16 +152,26 @@ class Signal(object):
         return self.wavelength
     
     def inplace_normalise(self):
+        np = self.get_module()
         factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
         self[:] = self[:]/np.sqrt(factor)
-        
+    
+    def get_module(self):
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+
+        return np
+
     def set_signal_power(self,power_in_dbm):
+        np = self.get_module()
         self.inplace_normalise()
         power_linear = 10**(power_in_dbm/10)/1000/2
         self[:] = np.sqrt(power_linear) * self[:]
 
     @classmethod
-    def creat_signal_from_array(cls,array,sps,sps_in_fiber,tx_symbol,order,baudrate,msg = None):
+    def creat_signal_from_array(cls,array,sps,sps_in_fiber,tx_symbol,order,baudrate,msg = None,device='cpu'):
         tx_symbol = np.atleast_2d(tx_symbol)
         signal = cls(qamorder=order,baudrate = baudrate,sps = sps,sps_in_fiber=sps_in_fiber,symbol_length=tx_symbol.shape[1],pol_number=tx_symbol.shape[0])
 
@@ -176,7 +185,23 @@ class Signal(object):
 
         signal.ds_in_fiber = array
         signal.symbol = tx_symbol
+        signal.ds = signal.ds_in_fiber
+        if device=='cuda':
+            signal.cuda()
+
         return signal
+
+    def to_32complex(self):
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+            
+
+        self.ds_in_fiber = np.array(self.ds_in_fiber,dtype=np.complex64)
+        self.ds = np.array(self.ds,dtype=np.complex64)
+        self.is_on_cuda = True
+
 
 class QamSignal(Signal):
     

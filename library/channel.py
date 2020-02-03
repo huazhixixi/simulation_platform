@@ -31,7 +31,7 @@ class AwgnChannel(object):
 
 class Fiber(object):
 
-    def __init__(self, alpha, D, length, ref,slope):
+    def __init__(self, alpha, D, length, ref,slope,accuracy):
         '''
             :param alpha:db/km
             :D:s^2/km
@@ -47,6 +47,8 @@ class Fiber(object):
         self.ifft = None
         self.plan = None
         self.slope = slope
+        self.accuracy = accuracy
+
     def prop(self, signal):
         raise NotImplementedError
 
@@ -90,13 +92,13 @@ class Fiber(object):
 
 class NonlinearFiber(Fiber):
 
-    def __init__(self, alpha,D,length,ref,slope, **kwargs):
+    def __init__(self, alpha,D,length,ref,slope,accuracy, **kwargs):
         '''
             :param: kwargs:
                 key: step_length
                 key:gamma
         '''
-        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=ref,slope = slope)
+        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=ref,slope = slope,accuracy = accuracy)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
         self.linear_prop = None
@@ -152,16 +154,23 @@ class NonlinearFiber(Fiber):
 
     def prop(self, signal):
         signal.cuda()
-       
+     
 
         nstep = self.length / self.step_length
         nstep = int(np.floor(nstep))
+        
         freq = self.fftfreq(signal.shape[1], 1 / signal.fs_in_fiber)
+        if self.accuracy.lower()=='single':
+            signal.to_32complex()
+            freq = self.np.array(freq,dtype=self.np.complex64)
         omeg = 2 * self.np.pi * freq
         D = -1j / 2 * self.beta2(signal.wavelength) * omeg ** 2
         N = 8 / 9 * 1j * self.gamma
         atten = -self.alphalin / 2
         last_step = self.length - self.step_length * nstep
+     
+           
+
 
         signal[0], signal[1] = self.linear_prop(D, signal[0], signal[1], self.step_length / 2)
         signal[0], signal[1] = self.nonlinear_prop(N, signal[0], signal[1])
