@@ -128,7 +128,7 @@ class NonlinearFiber(Fiber):
                 self.linear_prop = self.linear_prop_af
                 self.np = af
             except ImportError:
-                from scipy.fft import get_fft_plan
+                from scipy.fft import fft,ifft,fftfreq
                 self.fft = fft
                 self.ifft = ifft
                 self.fftfreq = fftfreq
@@ -138,6 +138,7 @@ class NonlinearFiber(Fiber):
                         pass
                     def __exit__(self, exc_type, exc_val, exc_tb):
                         pass
+
                 self.plan = plan
                 import numpy as np
                 self.np = np
@@ -154,23 +155,20 @@ class NonlinearFiber(Fiber):
 
     def prop(self, signal):
         signal.cuda()
-     
-
         nstep = self.length / self.step_length
         nstep = int(np.floor(nstep))
         
         freq = self.fftfreq(signal.shape[1], 1 / signal.fs_in_fiber)
+
         if self.accuracy.lower()=='single':
             signal.to_32complex()
             freq = self.np.array(freq,dtype=self.np.complex64)
+
         omeg = 2 * self.np.pi * freq
         D = -1j / 2 * self.beta2(signal.wavelength) * omeg ** 2
         N = 8 / 9 * 1j * self.gamma
         atten = -self.alphalin / 2
         last_step = self.length - self.step_length * nstep
-     
-           
-
 
         signal[0], signal[1] = self.linear_prop(D, signal[0], signal[1], self.step_length / 2)
         signal[0], signal[1] = self.nonlinear_prop(N, signal[0], signal[1])
@@ -227,3 +225,6 @@ class NonlinearFiber(Fiber):
             time_x = self.ifft(freq_x, overwrite_x=True)
             time_y = self.ifft(freq_y, overwrite_x=True)
             return time_x, time_y
+
+    def linear_prop_af(self,signal):
+        raise NotImplementedError
