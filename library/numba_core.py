@@ -4,7 +4,8 @@ Created on Tue Jan 28 03:52:17 2020
 
 @author: shang
 """
-
+import numba
+import numpy as np
 
 from numba import complex128,double
 cma_core_type = \

@@ -23,7 +23,7 @@ class AwgnChannel(object):
             power = np.sum(power)
             noise_power = power / self.snr_linear * signal.sps_in_fiber
             noise_power_xpol = noise_power / 2
-            seq = (noise_power_xpol / 2) * (np.random.randn(2, len(signal)) + 1j * np.random.randn(2, len(signal)))
+            seq = np.sqrt((noise_power_xpol / 2)) * (np.random.randn(2, len(signal)) + 1j * np.random.randn(2, len(signal)))
 
             signal[:] = signal[:] + seq
             return signal

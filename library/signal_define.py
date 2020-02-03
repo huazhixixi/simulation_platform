@@ -85,9 +85,9 @@ class Signal(object):
             ax.set_aspect('equal', 'box')
 
             ax.set_xlim(
-                    [self.ds_in_fiber[ith, ::sps].real.min() - 0.1, self.ds_in_fiber[ith, ::sps].real.max() + 0.1])
+                    [self.ds_in_fiber[ith, ::sps].real.min() - self.ds_in_fiber[ith, ::sps].real.min()/3, self.ds_in_fiber[ith, ::sps].real.max() + self.ds_in_fiber[ith, ::sps].real.max()/3])
             ax.set_ylim(
-                    [self.ds_in_fiber[ith, ::sps].imag.min() - 0.1, self.ds_in_fiber[ith, ::sps].imag.max() + 0.1])
+                    [self.ds_in_fiber[ith, ::sps].imag.min() - self.ds_in_fiber[ith, ::sps].imag.min()/3, self.ds_in_fiber[ith, ::sps].imag.max() + self.ds_in_fiber[ith, ::sps].imag.max()/3])
 
         plt.tight_layout()
         plt.show()
@@ -133,6 +133,11 @@ class Signal(object):
             self.is_on_cuda = False
         return self
 
+    def to_mat(self,filename):
+        from scipy.io import savemat
+        savemat(filename,dict(fs = self.fs,fs_in_fiber = self.fs_in_fiber,sps = self.sps,sps_in_fiber = self.sps_in_fiber,baudrate = self.baudrate,
+                              samples_in_fiber = self.samples,symbol_tx = self.symbol))
+
     @property
     def wavelength(self):
         from scipy.constants import c
@@ -150,7 +155,24 @@ class Signal(object):
         self.inplace_normalise()
         power_linear = 10**(power_in_dbm/10)/1000/2
         self[:] = np.sqrt(power_linear) * self[:]
-    
+
+    @classmethod
+    def creat_signal_from_array(cls,array,sps,sps_in_fiber,tx_symbol,order,baudrate,msg = None):
+        tx_symbol = np.atleast_2d(tx_symbol)
+        signal = cls(qamorder=order,baudrate = baudrate,sps = sps,sps_in_fiber=sps_in_fiber,symbol_length=tx_symbol.shape[1],pol_number=tx_symbol.shape[0])
+
+        signal.ds = None
+        signal.samples = None
+        signal.message = None
+        signal.symbol = None
+
+        if msg:
+            signal.message = msg
+
+        signal.ds_in_fiber = array
+        signal.symbol = tx_symbol
+        return signal
+
 class QamSignal(Signal):
     
     def __init__(self, qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number):
@@ -189,14 +211,21 @@ class QamSignal(Signal):
             row[:] = rrcos_pulseshaping_freq(row, self.fs, 1 / self.baudrate, roll_off, self.is_on_cuda)
             if not self.is_on_cuda:
                 import resampy
+                from scipy.signal import resample
+                #self.ds_in_fiber[index] = resample_po(row,self.sps_in_fiber//self.sps * row.shape[0])
                 self.ds_in_fiber[index] = resampy.resample(row, self.sps, self.sps_in_fiber, filter='kaiser_fast')
             else:
                 import cusignal
                 self.ds_in_fiber[index] = cusignal.resample_poly(row, self.sps_in_fiber / self.sps, 1, axis=-1)
+        # self.symbol[1] = self.symbol[0]
+        # self.ds_in_fiber[1] = self.ds_in_fiber[0]
 
     @property
     def time_vector(self):
         return 1 / self.fs_in_fiber * np.arange(self.ds_in_fiber.shape[1])
+
+
+
 
 
 class WdmSignal(object):
