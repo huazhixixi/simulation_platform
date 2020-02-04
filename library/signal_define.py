@@ -1,9 +1,11 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from .filter_design import rrcos_pulseshaping_freq
 from .utilities import upsampling
-import os
+
 BASE = os.path.dirname(os.path.abspath(__file__))
 
 class Signal(object):
@@ -284,6 +286,7 @@ class QamSignal(Signal):
                 self.ds_in_fiber[index] = cusignal.resample_poly(row, self.sps_in_fiber / self.sps, 1, axis=-1)
         # self.symbol[1] = self.symbol[0]
         # self.ds_in_fiber[1] = self.ds_in_fiber[0]
+        return self
 
     @property
     def time_vector(self):
@@ -295,7 +298,7 @@ class QamSignal(Signal):
 
 class WdmSignal(object):
     
-    def __init__(self, symbols, wdm_samples, freq, is_on_cuda, fs_in_fiber):
+    def __init__(self, symbols, wdm_samples, freq, is_on_cuda, fs_in_fiber,center_freq,**kwargs):
         self.symbols = symbols
         self.wdm_samples = wdm_samples
 
@@ -306,6 +309,7 @@ class WdmSignal(object):
         self.wdm_comb_config = None
         self.baudrates = None
         self.qam_orders = None
+        self.center_freq = center_freq
 
         if self.is_on_cuda:
             import cupy as cp
@@ -317,7 +321,6 @@ class WdmSignal(object):
     def cuda(self):
         if self.is_on_cuda:
             return self
-
         else:
             try:
                 import cupy as cp
@@ -355,18 +358,62 @@ class WdmSignal(object):
         else:
             plt.psd(self[0], NFFT=16384, Fs=self.fs_in_fiber, window=np.hamming(16384))
             plt.show()
-    @property
-    def shape(self):
-        return self.wdm_samples.shape
+        @property
+        def shape(self):
+            return self.wdm_samples.shape
 
-    @property
-    def __len__(self):
+        @property
+        def __len__(self):
+            if self.is_on_cuda:
+                import cupy as np
+            else:
+                import numpy as np
+            return len(np.atleast_2d(self.wdm_samples)[0])
+
+    def save_to_mat(self,filename):
+        from scipy.io import savemat
+        flag = 0
         if self.is_on_cuda:
-            import cupy as np
-        else:
-            import numpy as np
-        return len(np.atleast_2d(self.wdm_samples)[0])
+            self.cpu()
+            flag = 1
+        savemat(filename,dict(fs = self.fs,fs_in_fiber = self.fs_in_fiber,sps = self.sps,sps_in_fiber = self.sps_in_fiber,baudrate = self.baudrate,    samples_in_fiber = self.samples,symbol_tx = self.symbol))
+        if flag:
+            self.cuda()
 
+    def save(self,file_name):
+        self.cpu()
+
+        param = dict( symbols = self.symbols ,
+        wdm_samples = self.wdm_samples ,
+
+        freq = self.relative_freq   ,     
+        fs_in_fiber = self.fs_in_fiber ,     
+
+        wdm_comb_config = self.wdm_comb_config  ,   
+        baudrates = self.baudrates, 
+        qam_orders = self.qam_orders 
+       )
+
+        import joblib
+        joblib.dump(param,file_name)
+        self.cuda()
+
+    @classmethod
+    def load(cls,filename):
+        import joblib
+        param = joblib.load(filename)
+        signal = cls(**param)
+        signal.wdm_comb_config = param['wdm_comb_config']
+        signal.baudrates = param['baudrates']
+        signal.qam_orders = param['qam_orders']
+
+        return signal
+    @property
+    def wavelength(self):
+        from scipy.constants import  c
+        return c/self.center_freq
+
+        
 
 class DummySignal:
     def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, sps):

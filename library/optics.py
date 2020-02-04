@@ -161,7 +161,7 @@ class WSS(object):
 class Mux(object):
 
     @staticmethod
-    def mux_signal(signals, relative_freq=None, wdm_comb_config=None):
+    def mux_signal(signals, center_freq=None, relative_freq=None, wdm_comb_config=None):
         if signals[0].is_on_cuda:
             import cupy as np
         else:
@@ -180,7 +180,9 @@ class Mux(object):
         if relative_freq is None:
             relative_freq = np.array(freqs) - (np.max(freqs) + np.min(freqs)) / 2
             wdm_comb_config = np.arange(len(signals))
+            center_freq = (np.max(freqs) + np.min(freqs)) / 2
         else:
+            assert center_freq is not None
             assert wdm_comb_config is not None
 
         max_length = np.max(length)
@@ -199,7 +201,7 @@ class Mux(object):
             wdm_samples += freq_samples
         symbols = [signal.symbol for signal in signals]
         wdm_signal = WdmSignal(symbols, np.fft.ifft(wdm_samples, axis=-1), relative_freq, signals[0].is_on_cuda,
-                               fs_in_fiber=fs[0])
+                               fs_in_fiber=fs[0],center_freq = center_freq)
         wdm_signal.wdm_comb_config = wdm_comb_config
         wdm_signal.baudrates = [signal.baudrate for signal in signals]
         wdm_signal.qam_orders = [signal.qam_order for signal in signals]
@@ -254,16 +256,26 @@ class Edfa:
         return 10**(self.gain/10)
 
     def prop(self,signal):
-        raise NotImplementedError
+        signal[:] = np.sqrt(self.gain_linear) * signal[:]
+        if self.is_ase:
+            psd = self.noise_psd(signal.wavelength)
+            noise_power_one_poloarization = psd * signal.fs_in_fiber
+
+            noise_sequence = np.random.normal(scale=np.sqrt(noise_power_one_poloarization / 2),
+                                              size=signal.shape) + 1j * np.random.normal(
+                scale=np.sqrt(noise_power_one_poloarization / 2), size=signal.shape)
+            signal[:] = signal[:] + noise_sequence
 
     def cuda(self):
         if self.is_on_cuda:
             return
-
-        import cupy as np
-        self.np = nf
-        self.is_on_cuda = True
-
+        try:
+            import cupy as np
+            self.np = nf
+            self.is_on_cuda = True
+        except ImportError:
+            print('cuda not supported')
+            
     def cpu(self):
         if not self.is_on_cuda:
             return
@@ -280,8 +292,8 @@ class Edfa:
                 else:
                     block
         '''
-        asd_psd = (h*c/wavelength)*(self.gain_linear *10**(self.nf/10)-1)/2
-        return noise_psd
+        ase_psd = (h*c/wavelength)*(self.gain_linear *10**(self.nf/10)-1)/2
+        return ase_psd
 
 
 class ConstantPowerEdfa(Edfa):
@@ -303,23 +315,15 @@ class ConstantPowerEdfa(Edfa):
             warnings.warn("The EDFA will attuenate the signal, please ensure this is what you want")
 
         self.gian = self.expected_power - power_now_dbm
-
-        signal[:] = np.sqrt(self.gain_linear) * signal[:]
-
-        if self.is_ase:
-            psd = self.noise_psd(signal.wavelength)
-            noise_power_one_poloarization = psd * signal.fs_in_fiber
-
-            noise_sequence = np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)+ 1j*np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)
-            signal[:] = signal[:] + noise_sequence
-
-        return signal
+        super(ConstantPowerEdfa, self).prop(signal)
+    
+        
     
     def __str__(self):
         gain_info = 'None' if self.gain is None else self.gain
-        string_info = f'\t Mode: {self.mode}\t\n'
-                      f'\t Expected_power: {self.expected_power} dbm\t\n'
-                      f'\t Gain: {gain_info} dB \t\n'
+        string_info = f'\t Mode: {self.mode}\t\n' \
+                      f'\t Expected_power: {self.expected_power} dbm\t\n' \
+                      f'\t Gain: {gain_info} dB \t\n' \
                       f'\t Noise Figure: {self.nf} dB \t\n'
 
         return string_info
@@ -336,22 +340,15 @@ class ConstantGainEdfa(Edfa):
         self.gain = gain
 
     def prop(self,signal):
-        signal[:] = np.sqrt(self.gain_linear) * signal[:]
-
-        if self.is_ase:
-            psd = self.noise_psd(signal.wavelength)
-            noise_power_one_poloarization = psd * signal.fs_in_fiber
-
-            noise_sequence = np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)+ 1j*np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)
-            signal[:] = signal[:] + noise_sequence
-
+        
+        super(ConstantGainEdfa, self).prop(signal=signal)
         return signal
 
     def __str__(self):
         gain_info = 'None' if self.gain is None else self.gain
-        string_info = f'\t Mode: {self.mode}\t\n'
-                      f'\t Expected_power: {self.expected_power} dbm\t\n'
-                      f'\t Gain: {gain_info} dB \t\n'
+        string_info = f'\t Mode: {self.mode}\t\n' \
+                      f'\t Expected_power: {self.expected_power} dbm\t\n' \
+                      f'\t Gain: {gain_info} dB \t\n' \
                       f'\t Noise Figure: {self.nf} dB \t\n'
 
         return string_info

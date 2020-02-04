@@ -31,18 +31,18 @@ class AwgnChannel(object):
 
 class Fiber(object):
 
-    def __init__(self, alpha, D, length, ref,slope,accuracy,name='SSMF',**kwargs):
+    def __init__(self, alpha, D, length, reference_wavelength,slope,accuracy,name='SSMF',**kwargs):
         '''
             :param alpha:db/km
             :D:s^2/km
             :length:km
-            :ref:nm
+            :reference_wavelength:nm
 
         '''
         self.alpha = alpha
         self.D = D
         self.length = length
-        self.reference_wavelength = ref  # nm
+        self.reference_wavelength = reference_wavelength  # nm
         self.fft = None
         self.ifft = None
         self.plan = None
@@ -93,13 +93,13 @@ class Fiber(object):
 
 class NonlinearFiber(Fiber):
 
-    def __init__(self, alpha,D,length,ref,slope,accuracy, **kwargs):
+    def __init__(self, alpha,D,length,reference_wavelength,slope,accuracy, **kwargs):
         '''
             :param: kwargs:
                 key: step_length
                 key:gamma
         '''
-        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=ref,slope = slope,accuracy = accuracy,**kwargs)
+        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=reference_wavelength,slope = slope,accuracy = accuracy,**kwargs)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
         self.linear_prop = None
