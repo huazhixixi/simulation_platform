@@ -17,8 +17,8 @@ span_dict = {
 }
 
 
-def generate_wdm_signal(nch=3,powerdbm):
-    lasers = [Laser(0, False, 193.45e12 + i * 50e9, 0) for i in range(3)]
+def generate_wdm_signal(powerdbm,nch=3):
+    lasers = [Laser(0, False, 193.45e12 + i * 50e9, powerdbm) for i in range(3)]
     signals = [QamSignal(16, 35e9, 2, 8, 65536, 2) for _ in range(3)]
 
     for laser, sig in zip(lasers, signals):
