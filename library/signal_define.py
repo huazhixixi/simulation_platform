@@ -372,13 +372,13 @@ class WdmSignal(object):
 
     def save_to_mat(self,filename):
         from scipy.io import savemat
-        flag = 0
-        if self.is_on_cuda:
-            self.cpu()
-            flag = 1
-        savemat(filename,dict(fs = self.fs,fs_in_fiber = self.fs_in_fiber,sps = self.sps,sps_in_fiber = self.sps_in_fiber,baudrate = self.baudrate,    samples_in_fiber = self.samples,symbol_tx = self.symbol))
-        if flag:
-            self.cuda()
+        self.cpu()
+        param = dict(fs_in_fiber = self.fs_in_fiber,wdm_samples = self.wdm_samples,
+
+                     symbols = np.array(self.symbols),baudrates = np.array(self.baudrates),center_freq = self.center_freq,relative_freq = self.relative_freq
+                     )
+        savemat(filename,param)
+        self.cuda()
 
     def save(self,file_name):
         self.cpu()
@@ -391,7 +391,8 @@ class WdmSignal(object):
 
         wdm_comb_config = self.wdm_comb_config  ,   
         baudrates = self.baudrates, 
-        qam_orders = self.qam_orders 
+        qam_orders = self.qam_orders,
+        center_freq = self.center_freq
        )
 
         import joblib
@@ -402,7 +403,7 @@ class WdmSignal(object):
     def load(cls,filename):
         import joblib
         param = joblib.load(filename)
-        signal = cls(**param)
+        signal = cls(**param,is_on_cuda=False)
         signal.wdm_comb_config = param['wdm_comb_config']
         signal.baudrates = param['baudrates']
         signal.qam_orders = param['qam_orders']

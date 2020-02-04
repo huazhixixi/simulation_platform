@@ -45,7 +45,7 @@
 #
 # %%
 
-from library.signal_define import QamSignal
+from library.signal_define import QamSignal, WdmSignal
 from library.optics import Mux, Laser, Edfa
 from library.channel import NonlinearFiber
 
@@ -67,15 +67,11 @@ def generate_wdm_signal(nch=3):
 from library.channel import NonlinearFiber
 
 wdm_signal = generate_wdm_signal()
-wdm_signal.cpu()
-
-
-
-fiber = NonlinearFiber(0.2, 16.7, 80, 1550, 0, 'double')
-
-fiber.prop(wdm_signal)
-
+wdm_signal.save('test_save_function')
+wdm_signal.save_to_mat('wdm_signal.mat')
 # %%
+wdm_signal = WdmSignal.load('test_save_function')
+
 
 
 
