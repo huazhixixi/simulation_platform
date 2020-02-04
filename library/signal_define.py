@@ -132,7 +132,7 @@ class Signal(object):
             self.is_on_cuda = False
         return self
 
-    def to_mat(self,filename):
+    def save_to_mat(self,filename):
         from scipy.io import savemat
         flag = 0
         if self.is_on_cuda:
@@ -142,6 +142,40 @@ class Signal(object):
                               samples_in_fiber = self.samples,symbol_tx = self.symbol))
         if flag:
             self.cuda()
+
+    def save(self,file_name):
+        flag = False
+        if self.is_on_cuda:
+            self.cpu()
+            flat = True
+
+        samples_in_fiber = self[:]
+        samples = self.ds
+        sps = self.sps
+        sps_in_fiber = self.sps_in_fiber
+        msg = self.message
+        qam_order = self.qam_order
+        baudrate = self.baudrate
+        symbol = self.symbol
+
+        import joblib
+        joblib.dump(dict(ds_in_fiber = samples_in_fiber,ds=samples,sps=sps,sps_in_fiber = sps_in_fiber,msg = msg,qamorder = qam_order,baudrate = baudrate,symbol = symbol,symbol_length = self.symbol_length,pol_number = self.pol_number,doinit = False),file_name)
+
+        if flag:
+            self.cuda()
+
+    @classmethod
+    def load(cls,filename):
+        import joblib
+        param = joblib.load(filename)
+        signal = cls(**param)
+        signal.samples = param['ds_in_fiber']
+        signal.ds = param['ds']
+        signal.message = param['msg']
+        signal.symbol = param['symbol']
+        return signal
+
+
     @property
     def wavelength(self):
         from scipy.constants import c
@@ -171,7 +205,7 @@ class Signal(object):
         self[:] = np.sqrt(power_linear) * self[:]
 
     @classmethod
-    def creat_signal_from_array(cls,array,sps,sps_in_fiber,tx_symbol,order,baudrate,msg = None,device='cpu'):
+    def load_mat(cls,array,sps,sps_in_fiber,tx_symbol,order,baudrate,msg = None,device='cpu'):
         tx_symbol = np.atleast_2d(tx_symbol)
         signal = cls(qamorder=order,baudrate = baudrate,sps = sps,sps_in_fiber=sps_in_fiber,symbol_length=tx_symbol.shape[1],pol_number=tx_symbol.shape[0])
 
@@ -205,7 +239,7 @@ class Signal(object):
 
 class QamSignal(Signal):
     
-    def __init__(self, qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number):
+    def __init__(self, qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number,doinit = True,**kwargs):
         '''
 
         :param qamorder:
@@ -216,8 +250,9 @@ class QamSignal(Signal):
         :param pol_number:
         '''
         super().__init__(qamorder, baudrate, sps, sps_in_fiber, symbol_length, pol_number)
-        self.message = np.random.randint(low=0, high=self.qam_order, size=(self.pol_number, self.symbol_length))
-        self.map()
+        if doinit:
+            self.message = np.random.randint(low=0, high=self.qam_order, size=(self.pol_number, self.symbol_length))
+            self.map()
 
     def map(self):
         import joblib
