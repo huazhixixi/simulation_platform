@@ -99,7 +99,7 @@ class NonlinearFiber(Fiber):
                 key: step_length
                 key:gamma
         '''
-        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=reference_wavelength,slope = slope,accuracy = accuracy,**kwargs)
+        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,reference_wavelength=reference_wavelength,slope = slope,accuracy = accuracy,**kwargs)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
         self.linear_prop = None
@@ -128,19 +128,21 @@ class NonlinearFiber(Fiber):
                 self.ifft = af.idft
                 self.linear_prop = self.linear_prop_af
                 self.np = af
-            except ImportError:
+                raise ImportError
+                
+            except (ImportError,RuntimeError) :
                 from scipy.fft import fft,ifft,fftfreq
                 self.fft = fft
                 self.ifft = ifft
                 self.fftfreq = fftfreq
                 self.linear_prop = self.linear_prop_cupy_scipy
-                class plan:
+                class Plan:
                     def __enter__(self):
                         pass
                     def __exit__(self, exc_type, exc_val, exc_tb):
                         pass
 
-                self.plan = plan
+                self.plan = Plan()
                 import numpy as np
                 self.np = np
 

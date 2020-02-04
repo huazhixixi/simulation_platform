@@ -414,6 +414,9 @@ class WdmSignal(object):
         return c/self.center_freq
 
         
+    @property
+    def shape(self):
+        return self.wdm_samples.shape
 
 class DummySignal:
     def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, sps):
