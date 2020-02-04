@@ -29,32 +29,40 @@ def generate_wdm_signal(powerdbm,nch=3):
     return wdm_signal
 
 
-def only_nonlinear_prop(savedir,config_file):
+def only_nonlinear_prop(savedir):
     import pandas as pd
     data = pd.read_csv('span_power_config.csv')
-    powers = data.power.values
+    powers = data.power.values.reshape(-1,1)
     span_configs = data.loc[:,'0th_span':'14th_span'].values
 
-    for itemindex in range(powers.shape[0]):
+    for itemindex in tqdm.tqdm(range(powers.shape[0])):
         spans = []
-        power = powers[itemindex]
+        power = powers[itemindex,0]
         span = span_configs[itemindex]
 
 
         wdm_signal = generate_wdm_signal(powerdbm=power)
+        wdm_signal.to_32complex()
         for fiber_type in span:
-            spans.append(NonlinearFiber(**span_dict[fiber_type]))
+            spans.append(NonlinearFiber(**span_dict[fiber_type],length=80,reference_wavelength=1550,slope=0,accuracy='single'))
 
 
         for span in spans:
             wdm_signal = span.prop(wdm_signal)
-            wdm_signal[:] = (10**(span.alpha * span.length)/10) * wdm_signal[:]
+            wdm_signal[:] = np.sqrt((10**(span.alpha * span.length/10)))* wdm_signal[:]
 
-        wdm_signal.save()
+        wdm_signal.save(savedir+f'item_{itemindex}')
 
 
 def main():
-    pass
+    only_nonlinear_prop('h:/ai/bermargin/')
+
+
+
+
+
+main()
+
 
 
 def generate_config():
