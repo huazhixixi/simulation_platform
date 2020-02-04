@@ -318,6 +318,16 @@ class WdmSignal(object):
 
             self.relative_freq = cp.asnumpy(self.relative_freq)
 
+    def to_32complex(self):
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+
+        wdm_samples = np.zeros_like(self.wdm_samples,dtype=np.complex64)
+        wdm_samples[:] = self.wdm_samples[:]
+        self.wdm_samples = wdm_samples
+
     def cuda(self):
         if self.is_on_cuda:
             return self
