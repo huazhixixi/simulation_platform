@@ -242,11 +242,13 @@ from scipy.constants import h
 
 class Edfa:
         
-    def __init__(self,mode,nf):
+    def __init__(self,mode,nf,is_ase):
         self.mode = mode
         self.nf = nf
         self.gain = None
         self.is_on_cuda = False
+        self.is_ase = is_ase
+
     @property
     def gain_linear(self):
         return 10**(self.gain/10)
@@ -284,10 +286,78 @@ class Edfa:
 
 class ConstantPowerEdfa(Edfa):
 
-    def __init__(self,nf,expected_power):
+    def __init__(self,nf,expected_power,is_ase):
         '''
             :param expected_power : dbm
         '''
-        super().__init__(mode,nf)
+        super().__init__('ConstantPower',nf,is_ase)
         self.expected_power = expected_power
+    
+    def prop(self,signal):
+        power_now = np.mean(np.abs(signal[:])**2,axis=-1)
+        power_now = np.sum(power_now)
         
+        power_now_dbm = 10*np.log10(power_now * 1000)
+        if power_now_dbm > self.expected_power:
+            import warnings
+            warnings.warn("The EDFA will attuenate the signal, please ensure this is what you want")
+
+        self.gian = self.expected_power - power_now_dbm
+
+        signal[:] = np.sqrt(self.gain_linear) * signal[:]
+
+        if self.is_ase:
+            psd = self.noise_psd(signal.wavelength)
+            noise_power_one_poloarization = psd * signal.fs_in_fiber
+
+            noise_sequence = np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)+ 1j*np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)
+            signal[:] = signal[:] + noise_sequence
+
+        return signal
+    
+    def __str__(self):
+        gain_info = 'None' if self.gain is None else self.gain
+        string_info = f'\t Mode: {self.mode}\t\n'
+                      f'\t Expected_power: {self.expected_power} dbm\t\n'
+                      f'\t Gain: {gain_info} dB \t\n'
+                      f'\t Noise Figure: {self.nf} dB \t\n'
+
+        return string_info
+
+    def __repr__(self):
+        return self.__str__()   
+
+
+
+class ConstantGainEdfa(Edfa):
+
+    def __init__(self,gain,nf,is_ase):
+        super().__init__('ConstantGain',nf,is_ase)
+        self.gain = gain
+
+    def prop(self,signal):
+        signal[:] = np.sqrt(self.gain_linear) * signal[:]
+
+        if self.is_ase:
+            psd = self.noise_psd(signal.wavelength)
+            noise_power_one_poloarization = psd * signal.fs_in_fiber
+
+            noise_sequence = np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)+ 1j*np.random.normal(scale=np.sqrt(noise_power_one_poloarization/2),size=signal.shape)
+            signal[:] = signal[:] + noise_sequence
+
+        return signal
+
+    def __str__(self):
+        gain_info = 'None' if self.gain is None else self.gain
+        string_info = f'\t Mode: {self.mode}\t\n'
+                      f'\t Expected_power: {self.expected_power} dbm\t\n'
+                      f'\t Gain: {gain_info} dB \t\n'
+                      f'\t Noise Figure: {self.nf} dB \t\n'
+
+        return string_info
+
+    def __repr__(self):
+        return self.__str__()   
+
+
+
