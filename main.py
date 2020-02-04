@@ -67,16 +67,17 @@ def generate_wdm_signal(nch=3):
 from library.channel import NonlinearFiber
 import numpy as np
 np.random.seed(0)
-
+import tqdm
 
 wdm_signal = generate_wdm_signal(3)
-wdm_signal.save_to_mat('before_transimt')
-fiber = NonlinearFiber(0.2,16.7,80,1550,0,'double')
+wdm_signal.to_32complex()
+#wdm_signal.save_to_mat('before_transimt')
+fiber = NonlinearFiber(0.2,16.7,80,1550,0,'single')
 
-for i in range(5):
+for i in tqdm.tqdm(range(5)):
     wdm_signal = fiber.prop(wdm_signal)
     wdm_signal[:] = np.sqrt(10**(16/10))*wdm_signal[:]
-wdm_signal.save_to_mat('after_transimt_double_accuracy')
+wdm_signal.save_to_mat('after_transimt_single_accuracy')
 
 
 
