@@ -31,7 +31,7 @@ class AwgnChannel(object):
 
 class Fiber(object):
 
-    def __init__(self, alpha, D, length, ref,slope,accuracy):
+    def __init__(self, alpha, D, length, ref,slope,accuracy,name='SSMF',**kwargs):
         '''
             :param alpha:db/km
             :D:s^2/km
@@ -48,6 +48,7 @@ class Fiber(object):
         self.plan = None
         self.slope = slope
         self.accuracy = accuracy
+        self.name = name
 
     def prop(self, signal):
         raise NotImplementedError
@@ -98,7 +99,7 @@ class NonlinearFiber(Fiber):
                 key: step_length
                 key:gamma
         '''
-        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=ref,slope = slope,accuracy = accuracy)
+        super(NonlinearFiber, self).__init__(alpha=alpha,D=D,length=length,ref=ref,slope = slope,accuracy = accuracy,**kwargs)
         self.step_length = kwargs.get('step_length', 20 / 1000)
         self.gamma = kwargs.get('gamma', 1.3)
         self.linear_prop = None
