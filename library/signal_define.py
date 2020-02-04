@@ -350,6 +350,8 @@ class WdmSignal(object):
             self.wdm_samples = cp.asnumpy(self.wdm_samples)
             self.fs_in_fiber = cp.asnumpy(self.fs_in_fiber)
             self.is_on_cuda = False
+            self.center_freq = cp.asnumpy(self.center_freq)
+
         return self
 
     def __getitem__(self, value):
