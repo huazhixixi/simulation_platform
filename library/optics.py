@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from .signal_define import WdmSignal
+from .signal_define import WdmSignal,DummySignal
 from .filter_design import  ideal_lp
 
 class Laser(object):
@@ -237,4 +237,57 @@ class Demux(object):
         signal = DummySignal(np.fft.ifft(freq_samples, axis=-1), baudrate, qam_order, symbols, wdm_signals.is_on_cuda,
                              wdm_signals.fs_in_fiber)
         return signal
+from scipy.constants import c
+from scipy.constants import h
 
+class Edfa:
+        
+    def __init__(self,mode,nf):
+        self.mode = mode
+        self.nf = nf
+        self.gain = None
+        self.is_on_cuda = False
+    @property
+    def gain_linear(self):
+        return 10**(self.gain/10)
+
+    def prop(self,signal):
+        raise NotImplementedError
+
+    def cuda(self):
+        if self.is_on_cuda:
+            return
+
+        import cupy as np
+        self.np = nf
+        self.is_on_cuda = True
+
+    def cpu(self):
+        if not self.is_on_cuda:
+            return
+        else:
+            import numpy as np
+            self.np = np
+            self.is_on_cuda = False
+
+    def noise_psd(self,wavelength):
+        '''
+            Function:
+                return the psd of the async for target in iter:
+                    block
+                else:
+                    block
+        '''
+        asd_psd = (h*c/wavelength)*(self.gain_linear *10**(self.nf/10)-1)/2
+        return noise_psd
+
+
+class ConstantPowerEdfa(Edfa):
+
+    def __init__(self,nf,expected_power):
+        '''
+            :param expected_power : dbm
+        '''
+        super().__init__(mode,nf)
+        self.expected_power = expected_power
+        
