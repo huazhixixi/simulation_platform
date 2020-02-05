@@ -181,6 +181,10 @@ class Mux(object):
             relative_freq = np.array(freqs) - (np.max(freqs) + np.min(freqs)) / 2
             wdm_comb_config = np.arange(len(signals))
             center_freq = (np.max(freqs) + np.min(freqs)) / 2
+            if hasattr(np,'asnumpy'):
+                center_freq = np.asnumpy(center_freq)
+                relative_freq = np.asnumpy(relative_freq)
+                wdm_comb_config = np.asnumpy(wdm_comb_config)
         else:
             assert center_freq is not None
             assert wdm_comb_config is not None
