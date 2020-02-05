@@ -374,17 +374,17 @@ class WdmSignal(object):
         else:
             plt.psd(self[0], NFFT=16384, Fs=self.fs_in_fiber, window=np.hamming(16384))
             plt.show()
-        @property
-        def shape(self):
-            return self.wdm_samples.shape
+    @property
+    def shape(self):
+        return self.wdm_samples.shape
 
-        @property
-        def __len__(self):
-            if self.is_on_cuda:
-                import cupy as np
-            else:
-                import numpy as np
-            return len(np.atleast_2d(self.wdm_samples)[0])
+    @property
+    def __len__(self):
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+        return len(np.atleast_2d(self.wdm_samples)[0])
 
     def save_to_mat(self,filename):
         from scipy.io import savemat
@@ -425,15 +425,13 @@ class WdmSignal(object):
         signal.qam_orders = param['qam_orders']
 
         return signal
+
     @property
     def wavelength(self):
         from scipy.constants import  c
         return c/self.center_freq
 
         
-    @property
-    def shape(self):
-        return self.wdm_samples.shape
 
 class DummySignal:
     def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, sps):
