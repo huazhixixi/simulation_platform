@@ -347,11 +347,15 @@ class WdmSignal(object):
             return self
         else:
             import cupy as cp
-            self.wdm_samples = cp.asnumpy(self.wdm_samples)
-            self.fs_in_fiber = cp.asnumpy(self.fs_in_fiber)
+            for attri in dir(self):
+                if attri.startswith('__') and attri.endswith('__'):
+                    continue
+                else:
+                    x = getattr(self,attri)
+                    if isinstance(x,cp.ndarray):
+                        x = cp.asnumpy(x)
+                        setattr(self,attri,x)
             self.is_on_cuda = False
-            self.center_freq = cp.asnumpy(self.center_freq)
-
         return self
 
     def __getitem__(self, value):

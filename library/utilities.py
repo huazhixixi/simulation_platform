@@ -124,3 +124,6 @@ class Osa(object):
         res = snr + 10 * np.log10(self.reshz(wavelength) / 12.5e9)
         return res
 
+
+
+

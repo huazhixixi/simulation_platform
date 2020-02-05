@@ -170,6 +170,7 @@ class NonlinearFiber(Fiber):
             omeg = 2 * self.np.pi * freq
             D = -1j / 2 * self.beta2(signal.wavelength) * omeg ** 2
             D = self.np.array(D,dtype=np.complex64)
+
         N = 8 / 9 * 1j * self.gamma
         atten = -self.alphalin / 2
         last_step = self.length - self.step_length * nstep
