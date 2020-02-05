@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from library.optics import Laser, Mux
+from library.optics import Laser, Mux,ConstantGainEdfa
 from library.channel import NonlinearFiber
 from library.signal_define import QamSignal
 import tqdm
@@ -37,6 +37,7 @@ def only_nonlinear_prop(savedir):
 
     for itemindex in tqdm.tqdm(range(powers.shape[0])):
         spans = []
+        edfas = []
         power = powers[itemindex,0]
         span = span_configs[itemindex]
 
@@ -45,17 +46,16 @@ def only_nonlinear_prop(savedir):
         wdm_signal.to_32complex()
         for fiber_type in span:
             spans.append(NonlinearFiber(**span_dict[fiber_type],length=80,reference_wavelength=1550,slope=0,accuracy='single'))
+            edfas.append(ConstantGainEdfa(gain=spans[-1].alpha*spans[-1].length,nf=5,is_ase=True))
 
-
-        for span in spans:
+        for span,edfa in zip(spans,edfas):
             wdm_signal = span.prop(wdm_signal)
-            wdm_signal[:] = np.sqrt((10**(span.alpha * span.length/10)))* wdm_signal[:]
-
-        wdm_signal.save(savedir+f'item_{itemindex}')
+            wdm_signal = edfa.prop(wdm_signal)
+        wdm_signal.save(savedir+f'item_{itemindex}_ase')
 
 
 def main():
-    only_nonlinear_prop('h:/ai/bermargin/')
+    only_nonlinear_prop('f:/ai数据/bermargin/')
 
 
 
