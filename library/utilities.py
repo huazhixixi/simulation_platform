@@ -125,5 +125,34 @@ class Osa(object):
         return res
 
 
+def cpu(object):
+    if not object.is_on_cuda:
+        return
+    for attribute in dir(object):
+        import cupy as cp
+        attr =  getattr(object, attribute)
+        if isinstance(attr,cp.ndarray):
+            attr = cp.asnumpy(attr)
+            setattr(object, attribute, attr)
+    object.is_on_cuda = False
+    return object
+
+def cuda(object):
+    if object.is_on_cuda:
+        return
+
+    for attribute in dir(object):
+        import cupy as cp
+        import numpy as np
+        attr = getattr(object, attribute)
+        if isinstance(attr, np.ndarray):
+            attr = cp.array(attr)
+            setattr(object, attribute, attr)
+    object.is_on_cuda = True
+
+    return object
+
+
+
 
 
