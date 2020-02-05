@@ -265,9 +265,9 @@ class Edfa:
             psd = self.noise_psd(signal.wavelength)
             noise_power_one_poloarization = psd * signal.fs_in_fiber
 
-            noise_sequence = np.random.normal(scale=np.sqrt(noise_power_one_poloarization / 2),
-                                              size=signal.shape) + 1j * np.random.normal(
-                scale=np.sqrt(noise_power_one_poloarization / 2), size=signal.shape)
+            noise_sequence = self.np.random.normal(scale=self.np.sqrt(noise_power_one_poloarization / 2),
+                                              size=signal.shape) + 1j * self.np.random.normal(
+                scale=self.np.sqrt(noise_power_one_poloarization / 2), size=signal.shape)
             signal[:] = signal[:] + noise_sequence
 
     def cuda(self):
@@ -275,7 +275,7 @@ class Edfa:
             return
         try:
             import cupy as np
-            self.np = nf
+            self.np = np
             self.is_on_cuda = True
         except ImportError:
             print('cuda not supported')
@@ -310,10 +310,12 @@ class ConstantPowerEdfa(Edfa):
         self.expected_power = expected_power
     
     def prop(self,signal):
-        power_now = np.mean(np.abs(signal[:])**2,axis=-1)
-        power_now = np.sum(power_now)
+        if signal.is_on_cuda:
+            self.cuda()
+        power_now = self.np.mean(self.np.abs(signal[:])**2,axis=-1)
+        power_now = self.np.sum(power_now)
         
-        power_now_dbm = 10*np.log10(power_now * 1000)
+        power_now_dbm = 10*self.np.log10(power_now * 1000)
         if power_now_dbm > self.expected_power:
             import warnings
             warnings.warn("The EDFA will attuenate the signal, please ensure this is what you want")
@@ -344,14 +346,14 @@ class ConstantGainEdfa(Edfa):
         self.gain = gain
 
     def prop(self,signal):
-        
+        if signal.is_on_cuda:
+            self.cuda()
         super(ConstantGainEdfa, self).prop(signal=signal)
         return signal
 
     def __str__(self):
         gain_info = 'None' if self.gain is None else self.gain
         string_info = f'\t Mode: {self.mode}\t\n' \
-                      f'\t Expected_power: {self.expected_power} dbm\t\n' \
                       f'\t Gain: {gain_info} dB \t\n' \
                       f'\t Noise Figure: {self.nf} dB \t\n'
 
