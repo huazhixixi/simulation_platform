@@ -431,7 +431,19 @@ class WdmSignal(object):
         from scipy.constants import  c
         return c/self.center_freq
 
-        
+    @property
+    def length(self):
+        flat = False
+        if self.is_on_cuda:
+            self.cpu()
+            flat = True
+        samples = np.atleast_2d(self.wdm_samples)
+        length = samples.shape[1]
+
+        if flat:
+            self.cuda()
+        return length
+
 
 class DummySignal:
     def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, sps):
@@ -440,13 +452,15 @@ class DummySignal:
         self.qam_order = qam_order
         self.symbol = symbol
         self.is_on_cuda = is_on_cuda
-
-     
-
         self.sps = sps
         
         if self.is_on_cuda:
             import cupy as cp
+    @property
+    def constl(self):
+        import joblib
+        constl = joblib.load(BASE + '/constl')[self.qam_order][0]
+        return constl
 
     @property
     def fs(self):

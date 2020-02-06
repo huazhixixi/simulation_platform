@@ -7,17 +7,26 @@ import matplotlib.pyplot as plt
 from .signal_define import Signal
 from typing import List
 
-def cd_compensation(span,signal:Signal):
+def cd_compensation(span,signal:Signal,fs):
+    '''
+        span: The span for cd_c,should inlcude the following attributes:
+            beta2:callable: receive the signal wavelength and return beta2
+        signal:
+            in place modify the signal
+
+    '''
     if signal.is_on_cuda:
         import cupy as np
     else:
         import numpy as np
 
     center_wavelength = signal.wavelength
-    freq_vector = np.fft.fftfreq(len(signal[0]),1/signal.fs)
+    freq_vector = np.fft.fftfreq(len(signal[0]),fs)
     omeg_vector = 2*np.pi*freq_vector
     if not isinstance(span,list):
         spans = [span]
+    else:
+        spans = span
 
     for span in spans:
         beta2 = -span.beta2(center_wavelength)
@@ -148,6 +157,12 @@ class PhaseRecovery(object):
 class Superscalar(PhaseRecovery):
 
     def __init__(self,block_length,g,filter_n,delay,pilot_number):
+        '''
+            block_length: the block length of the cpe
+            g: paramater for pll
+            filter_n: the filter taps of the ml
+            pillot_number: the number of pilot symbols for each row
+        '''
         self.block_length = block_length
         self.block_number = None
         self.g = g
@@ -173,6 +188,7 @@ class Superscalar(PhaseRecovery):
 
         self.cpr = np.array(self.cpr)
         self.symbol_for_snr = np.array(self.symbol_for_snr)
+        return signal
 
     def plot_phase_noise(self):
         import matplotlib.pyplot as plt
@@ -188,7 +204,6 @@ class Superscalar(PhaseRecovery):
         res = []
         res_symbol = []
         for row in signal[:]:
-
             row = _segment_axis(row,self.block_length,0)
             res.append(row)
 

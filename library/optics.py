@@ -241,7 +241,7 @@ class Demux(object):
         baudrate = wdm_signals.baudrates[index]
         qam_order = wdm_signals.qam_orders[index]
         signal = DummySignal(np.fft.ifft(freq_samples, axis=-1), baudrate, qam_order, symbols, wdm_signals.is_on_cuda,
-                             wdm_signals.fs_in_fiber)
+                             int(wdm_signals.fs_in_fiber/baudrate))
         return signal
 from scipy.constants import c
 from scipy.constants import h
