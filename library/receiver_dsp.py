@@ -21,7 +21,7 @@ def cd_compensation(span,signal:Signal,fs):
         import numpy as np
 
     center_wavelength = signal.wavelength
-    freq_vector = np.fft.fftfreq(len(signal[0]),fs)
+    freq_vector = np.fft.fftfreq(len(signal[0]),1/fs)
     omeg_vector = 2*np.pi*freq_vector
     if not isinstance(span,list):
         spans = [span]
