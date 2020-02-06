@@ -62,17 +62,26 @@ class CoherentReceiver:
         noise = signal[:] - cpe_alg.symbol_for_snr
         noise_power = (np.abs(noise)**2).mean(axis=-1).sum()
 
-        self.snr_db_res = 10*np.log10(noise_power/10)
+        self.snr_db_res = 10*np.log10((2-noise_power)/noise_power)
 
 def main():
+    res = {}
+    import os
+    names = os.listdir('bermargin/')
+    names = map(lambda x: 'bermargin/' + x, names)
+    names = list(names)
+    for name in names:
+        try:
+            signal = WdmSignal.load(name)
+            item = int(name.split('/')[1].split('_')[1])
+        except Exception:
+            print(name)
 
-
-    wdm_signal = WdmSignal.load('item_o')
-
-    span = generate_span_for_cdc(ith=0)
-
-    receiver = CoherentReceiver(span,False,None)
-    receiver.prop(wdm_signal)
+        fiber = generate_span_for_cdc(item)
+        receiver = CoherentReceiver(fiber, False, None)
+        receiver.prop(signal)
+        res[name] = receiver.snr_db_res
+        print(name,receiver.snr_db_res)
 
 main()
 
