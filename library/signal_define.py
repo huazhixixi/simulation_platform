@@ -347,7 +347,8 @@ class WdmSignal(object):
             return self
         else:
             import cupy as cp
-            for attri in dir(self):
+            attris = dir(self)
+            for attri in attris:
                 if attri.startswith('__') and attri.endswith('__'):
                     continue
                 else:
@@ -433,15 +434,11 @@ class WdmSignal(object):
 
     @property
     def length(self):
-        flat = False
-        if self.is_on_cuda:
-            self.cpu()
-            flat = True
+
         samples = np.atleast_2d(self.wdm_samples)
         length = samples.shape[1]
 
-        if flat:
-            self.cuda()
+
         return length
 
 

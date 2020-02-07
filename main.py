@@ -35,7 +35,7 @@ def only_nonlinear_prop(savedir):
     powers = data.power.values.reshape(-1,1)
     span_configs = data.loc[:,'0th_span':'14th_span'].values
 
-    for itemindex in tqdm.tqdm(range(powers.shape[0])):
+    for itemindex in tqdm.tqdm(range(powers.shape[0]//2)):
         spans = []
         edfas = []
         power = powers[itemindex,0]
@@ -49,13 +49,15 @@ def only_nonlinear_prop(savedir):
             edfas.append(ConstantGainEdfa(gain=spans[-1].alpha*spans[-1].length,nf=5,is_ase=True))
 
         for span,edfa in zip(spans,edfas):
+
             wdm_signal = span.prop(wdm_signal)
             wdm_signal = edfa.prop(wdm_signal)
         wdm_signal.save(savedir+f'item_{itemindex}_ase')
 
 
 def main():
-    only_nonlinear_prop('f:/ai数据/bermargin/')
+    import os
+    only_nonlinear_prop(r'H:/ai/bermargin/withase/')
 
 
 
