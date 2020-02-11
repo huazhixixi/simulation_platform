@@ -160,8 +160,9 @@ class Edfa(object):
         nf_lin = 10 ** (self.nf / 10)
         gain_lin = 10 ** (self.gain / 10)
         s = h * signal.carri * (gain_lin - 1) * (nf_lin * gain_lin - 1) / (2 * (gain_lin - 1))
+        ase_psd = (h*signal.carri)*(gain_lin *nf_lin-1)/2
 
-        return 2 * s
+        return 2 * ase_psd
         # return 0
 
     def prop(self, signal: Signal):

@@ -159,9 +159,9 @@ class Signal(object):
         qam_order = self.qam_order
         baudrate = self.baudrate
         symbol = self.symbol
-
+        freq = self.freq
         import joblib
-        joblib.dump(dict(ds_in_fiber = samples_in_fiber,ds=samples,sps=sps,sps_in_fiber = sps_in_fiber,msg = msg,qamorder = qam_order,baudrate = baudrate,symbol = symbol,symbol_length = self.symbol_length,pol_number = self.pol_number,doinit = False),file_name)
+        joblib.dump(dict(freq = freq,ds_in_fiber = samples_in_fiber,ds=samples,sps=sps,sps_in_fiber = sps_in_fiber,msg = msg,qamorder = qam_order,baudrate = baudrate,symbol = symbol,symbol_length = self.symbol_length,pol_number = self.pol_number,doinit = False),file_name)
 
         if flag:
             self.cuda()
@@ -175,6 +175,7 @@ class Signal(object):
         signal.ds = param['ds']
         signal.message = param['msg']
         signal.symbol = param['symbol']
+        signal.freq = param['freq']
         return signal
 
 
@@ -375,6 +376,7 @@ class WdmSignal(object):
         else:
             plt.psd(self[0], NFFT=16384, Fs=self.fs_in_fiber, window=np.hamming(16384))
             plt.show()
+
     @property
     def shape(self):
         return self.wdm_samples.shape
@@ -434,11 +436,13 @@ class WdmSignal(object):
 
     @property
     def length(self):
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
 
         samples = np.atleast_2d(self.wdm_samples)
         length = samples.shape[1]
-
-
         return length
 
 
@@ -480,6 +484,7 @@ class DummySignal:
                 import cupy as cp
             except ImportError:
                 print('cuda not supported')
+                return
             self.samples = cp.array(self.samples)
             self.is_on_cuda = True
 
@@ -505,20 +510,22 @@ class DummySignal:
         return self.samples.shape
 
     def scatterplot(self, sps):
-        if self.is_on_cuda:
-            self.cpu()
-            fignumber = self.shape[0]
-            fig, axes = plt.subplots(nrows=1, ncols=fignumber)
-            for ith, ax in enumerate(axes):
-                ax.scatter(self[ith, ::sps].real, self[ith, ::sps].imag, s=1, c='b')
-                ax.set_aspect('equal', 'box')
 
-                ax.set_xlim([self[ith, ::sps].real.min() - self[ith, ::sps].real.min()/3, self[ith, ::sps].real.max() + self[ith, ::sps].real.max()/3])
-                ax.set_ylim([self[ith, ::sps].imag.min() - self[ith, ::sps].imag.min()/3, self[ith, ::sps].imag.max() + self[ith, ::sps].imag.max()/3])
+        self.cpu()
+        fignumber = self.shape[0]
+        fig, axes = plt.subplots(nrows=1, ncols=fignumber)
+        for ith, ax in enumerate(axes):
+            ax.scatter(self[ith, ::sps].real, self[ith, ::sps].imag, s=1, c='b')
+            ax.set_aspect('equal', 'box')
 
-            plt.tight_layout()
-            plt.show()
-            self.cuda()
+            ax.set_xlim([self[ith, ::sps].real.min() - np.abs(self[ith, ::sps].real.min()/3), self[ith, ::sps].real.max() + np.abs(self[ith, ::sps].real.max()/3)])
+            ax.set_ylim([self[ith, ::sps].imag.min() - np.abs(self[ith, ::sps].imag.min()/3), self[ith, ::sps].imag.max() + np.abs(self[ith, ::sps].imag.max()/3)])
+
+        plt.tight_layout()
+
+
+        plt.show()
+        self.cuda()
 
     def inplace_normalise(self):
         factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
