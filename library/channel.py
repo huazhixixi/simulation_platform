@@ -11,7 +11,7 @@ class AwgnChannel(object):
         self.snr = snr
         self.snr_linear = 10 ** (self.snr / 10)
 
-    def prop(self, signal, power='measure'):
+    def prop(self, signal, power='measure',divided_factor = 1):
         if signal.is_on_cuda:
             import cupy as np
         else:
@@ -22,7 +22,8 @@ class AwgnChannel(object):
             power = np.mean(np.abs(signal[:]) ** 2, axis=1)
             power = np.sum(power)
             noise_power = power / self.snr_linear * signal.sps_in_fiber
-            noise_power_xpol = noise_power / 2
+            noise_power_xpol = noise_power / 2/divided_factor
+
             seq = np.sqrt((noise_power_xpol / 2)) * (np.random.randn(2, len(signal)) + 1j * np.random.randn(2, len(signal)))
 
             signal[:] = signal[:] + seq

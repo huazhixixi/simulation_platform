@@ -381,7 +381,7 @@ class WdmSignal(object):
     def shape(self):
         return self.wdm_samples.shape
 
-    @property
+
     def __len__(self):
         if self.is_on_cuda:
             import cupy as np
@@ -445,6 +445,9 @@ class WdmSignal(object):
         length = samples.shape[1]
         return length
 
+    @property
+    def sps_in_fiber(self):
+        return self.fs_in_fiber/self.baudrates[0]
 
 class DummySignal:
     def __init__(self, samples, baudrate, qam_order, symbol, is_on_cuda, sps):
@@ -530,3 +533,4 @@ class DummySignal:
     def inplace_normalise(self):
         factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
         self[:] = self[:]/np.sqrt(factor)
+
