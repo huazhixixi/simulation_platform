@@ -67,16 +67,43 @@ class WSS(object):
 
         '''
 
-        :param frequency_offset: value away from center [GHz]
-        :param bandwidth: 3-db Bandwidth [Ghz]
-        :param oft:GHZ
+        :param frequency_offset: value away from center [Hz]
+        :param bandwidth: 3-db Bandwidth [hz]
+        :param oft:HZ
         '''
-        self.frequency_offset = frequency_offset / 1e9
-        self.bandwidth = bandwidth / 1e9
-        self.oft = oft / 1e9
+        self.__frequency_offset = frequency_offset / 1e9
+        self.__bandwidth = bandwidth / 1e9
+        self.__oft = oft / 1e9
         self.H = None
         self.freq = None
         self.is_on_cuda = False
+
+    @property
+    def frequency_offset(self):
+        return self.__frequency_offset
+
+    @frequency_offset.setter
+    def frequency_offset(self,value):
+        '''
+            value:hz
+        '''
+        self.__frequency_offset = value/1e9
+
+    @property
+    def bandwidth(self):
+        return self.__bandwidth
+
+    @bandwidth.setter
+    def bandwidth(self,value):
+        self.__bandwidth = value/1e9
+
+    @property
+    def oft(self):
+        return self.__oft
+
+    @oft.setter
+    def oft(self,value):
+        self.__oft = value/1e9
 
     def prop(self, signal):
 

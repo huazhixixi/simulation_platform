@@ -87,9 +87,9 @@ class Signal(object):
             ax.set_aspect('equal', 'box')
 
             ax.set_xlim(
-                    [self.ds_in_fiber[ith, ::sps].real.min() - self.ds_in_fiber[ith, ::sps].real.min()/3, self.ds_in_fiber[ith, ::sps].real.max() + self.ds_in_fiber[ith, ::sps].real.max()/3])
+                    [self.ds_in_fiber[ith, ::sps].real.min() - np.abs(self.ds_in_fiber[ith, ::sps].real.min())/3, self.ds_in_fiber[ith, ::sps].real.max() + np.abs(self.ds_in_fiber[ith, ::sps].real.max())/3])
             ax.set_ylim(
-                    [self.ds_in_fiber[ith, ::sps].imag.min() - self.ds_in_fiber[ith, ::sps].imag.min()/3, self.ds_in_fiber[ith, ::sps].imag.max() + self.ds_in_fiber[ith, ::sps].imag.max()/3])
+                    [self.ds_in_fiber[ith, ::sps].imag.min() - np.abs(self.ds_in_fiber[ith, ::sps].imag.min())/3, self.ds_in_fiber[ith, ::sps].imag.max() + np.abs(self.ds_in_fiber[ith, ::sps].imag.max())/3])
 
         plt.tight_layout()
         plt.show()
@@ -232,7 +232,7 @@ class Signal(object):
         if self.is_on_cuda:
             import cupy as np
         else:
-            import numpy as np
+            return
             
 
         self.ds_in_fiber = np.array(self.ds_in_fiber,dtype=np.complex64)
