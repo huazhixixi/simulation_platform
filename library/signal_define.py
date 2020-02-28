@@ -79,6 +79,7 @@ class Signal(object):
         if self.is_on_cuda:
             self.cpu()
             flag = True
+            print('trans')
             
         fignumber = self.shape[0]
         fig, axes = plt.subplots(nrows=1, ncols=fignumber)
@@ -513,8 +514,10 @@ class DummySignal:
         return self.samples.shape
 
     def scatterplot(self, sps):
-
-        self.cpu()
+        flag = False
+        if self.is_on_cuda:
+            self.cpu()
+            flag = True
         fignumber = self.shape[0]
         fig, axes = plt.subplots(nrows=1, ncols=fignumber)
         for ith, ax in enumerate(axes):
@@ -528,7 +531,8 @@ class DummySignal:
 
 
         plt.show()
-        self.cuda()
+        if flag:
+            self.cuda()
 
     def inplace_normalise(self):
         factor = np.mean(np.abs(self[:])**2,axis=1,keepdims=True)
