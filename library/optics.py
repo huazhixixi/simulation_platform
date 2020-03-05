@@ -197,12 +197,14 @@ class Mux(object):
         freqs = np.array([signal.freq for signal in signals])
 
         fs = np.array([signal.fs_in_fiber for signal in signals])
-
+        if hasattr(np,'asnumpy'):
+                fs = np.asnumpy(fs)
+               
         if not np.all(np.diff(fs) == 0):
             print(np.diff(fs))
             raise Exception('fs_in_fiber of the signal must be the same')
 
-        length = np.array([signal.shape[1] for signal in signals])
+        length = np.array([len(signal),for signal in signals])
 
         if relative_freq is None:
             relative_freq = np.array(freqs) - (np.max(freqs) + np.min(freqs)) / 2
@@ -212,6 +214,7 @@ class Mux(object):
                 center_freq = np.asnumpy(center_freq)
                 relative_freq = np.asnumpy(relative_freq)
                 wdm_comb_config = np.asnumpy(wdm_comb_config)
+
         else:
             assert center_freq is not None
             assert wdm_comb_config is not None

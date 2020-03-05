@@ -63,7 +63,12 @@ class Signal(object):
             plt.show()
 
     def __len__(self):
-        return len(self[0])
+        if self.is_on_cuda:
+            import cupy as np
+        else:
+            import numpy as np
+        samples = np.atleast_2d(self[:])
+        return len(samples[0])
 
     @property
     def constl(self):
@@ -79,7 +84,7 @@ class Signal(object):
         if self.is_on_cuda:
             self.cpu()
             flag = True
-            print('trans')
+            
             
         fignumber = self.shape[0]
         fig, axes = plt.subplots(nrows=1, ncols=fignumber)
@@ -114,11 +119,11 @@ class Signal(object):
     def cuda(self):
         if self.is_on_cuda:
             return
-
         try:
             import cupy as cp
         except ImportError:
             return
+        
         self.ds_in_fiber = cp.array(self.ds_in_fiber)
         self.ds = cp.array(self.ds)
         self.is_on_cuda = True
@@ -151,8 +156,7 @@ class Signal(object):
         if self.is_on_cuda:
             self.cpu()
             flat = True
-
-        samples_in_fiber = self[:]
+        samples_in_fiber = self.ds_in_fiber
         samples = self.ds
         sps = self.sps
         sps_in_fiber = self.sps_in_fiber
@@ -234,12 +238,9 @@ class Signal(object):
             import cupy as np
         else:
             return
-            
-
         self.ds_in_fiber = np.array(self.ds_in_fiber,dtype=np.complex64)
         self.ds = np.array(self.ds,dtype=np.complex64)
         self.is_on_cuda = True
-
 
 class QamSignal(Signal):
     
@@ -281,7 +282,6 @@ class QamSignal(Signal):
             if not self.is_on_cuda:
                 import resampy
                 from scipy.signal import resample
-                #self.ds_in_fiber[index] = resample_po(row,self.sps_in_fiber//self.sps * row.shape[0])
                 self.ds_in_fiber[index] = resampy.resample(row, self.sps, self.sps_in_fiber, filter='kaiser_fast')
             else:
                 import cusignal
@@ -293,9 +293,6 @@ class QamSignal(Signal):
     @property
     def time_vector(self):
         return 1 / self.fs_in_fiber * np.arange(self.ds_in_fiber.shape[1])
-
-
-
 
 
 class WdmSignal(object):

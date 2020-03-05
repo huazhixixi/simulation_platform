@@ -11,23 +11,25 @@ class AwgnChannel(object):
         self.snr = snr
         self.snr_linear = 10 ** (self.snr / 10)
 
-    def prop(self, signal, power='measure',divided_factor = 1):
+    def prop(self, signal, power,divided_factor = 1,is_dp = True):
+        '''
+            signal: The signal to be propagated
+            power: in dbm
+        '''
         if signal.is_on_cuda:
             import cupy as np
         else:
             import numpy as np
 
-        if power.lower() == 'measure':
-            
-            power = np.mean(np.abs(signal[:]) ** 2, axis=1)
-            power = np.sum(power)
-            noise_power = power / self.snr_linear * signal.sps_in_fiber
-            noise_power_xpol = noise_power / 2/divided_factor
+        power = 10**(power/10) /1000
 
-            seq = np.sqrt((noise_power_xpol / 2)) * (np.random.randn(2, len(signal)) + 1j * np.random.randn(2, len(signal)))
+        noise_power = power / self.snr_linear * signal.sps_in_fiber
+        noise_power_xpol = noise_power / (int(is_dp)+1)/divided_factor
 
-            signal[:] = signal[:] + seq
-            return signal
+        seq = np.sqrt((noise_power_xpol / 2)) * (np.random.randn(int(is_dp)+1, len(signal)) + 1j * np.random.randn(int(is_dp)+1, len(signal)))
+
+        signal[:] = signal[:] + seq
+        return signal
 
 
 class Fiber(object):
